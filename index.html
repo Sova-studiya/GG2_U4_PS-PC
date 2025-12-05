@@ -8,8 +8,8 @@
         /* Цвета */
         :root {
             --bg-color: #0a3d2e;
-            --path-color: #1f4a35; /* Новый: Сплошной цвет для пути лабиринта */
-            --wall-color: #0d2821; /* Новый: Сплошной цвет для стен (заполненных ячеек) */
+            --path-color: #1f4a35; /* Сплошной цвет для пути лабиринта */
+            --wall-color: #0d2821; /* Сплошной цвет для стен (заполненных ячеек) */
             --panel-color: rgba(20, 60, 45, 0.85);
             --player-color: #4ade80;
             --goal-color: #fbbf24;
@@ -36,7 +36,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            padding: 20px 20px 80px 20px; /* Увеличил нижний паддинг для мобильных контролов */
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
@@ -167,7 +167,6 @@
         canvas {
             width: 100%;
             height: 100%;
-            /* УДАЛЕН ГРАДИЕНТ, фон будет задан в JS как сплошной */
             background-color: var(--path-color); 
             border-radius: 15px;
             border: 3px solid var(--border-color);
@@ -414,29 +413,66 @@
                 font-size: 1.2rem;
                 min-height: 45px;
             }
+            
+            /* FIX: На планшетах и мобильных контролы располагаются под инструкциями и с отступом */
+            .mobile-controls {
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .instructions {
+                 /* Уменьшаем вертикальный отступ, чтобы оставить больше места для контролов */
+                margin-bottom: 10px;
+            }
         }
 
         @media (max-width: 480px) {
+            body {
+                padding: 10px 10px 150px 10px; /* Еще больший нижний паддинг для вертикальной компоновки контролов */
+            }
             .mobile-controls {
-                flex-direction: column;
-                align-items: center;
+                /* Принудительное позиционирование контролов внизу экрана для легкого доступа */
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: rgba(10, 61, 46, 0.95);
+                border-top: 2px solid var(--border-color);
+                padding: 10px;
+                flex-direction: row; /* На малых экранах лучше горизонтально, если позволяет место */
+                justify-content: space-around;
+                z-index: 50;
+                max-width: none;
+                gap: 10px;
             }
             
-            .joystick-container, .dpad-container {
-                width: 100%;
+            .joystick-container {
+                flex: none;
             }
             
             .dpad-container {
-                max-width: 200px;
+                flex: none;
+                max-width: 150px;
             }
             
             .dpad-btn {
-                height: 60px;
-                font-size: 1.5rem;
+                height: 40px;
+                min-height: 40px;
+                font-size: 1.2rem;
+            }
+            
+            .joystick {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .joystick-handle {
+                width: 35px;
+                height: 35px;
             }
             
             h1 {
-                font-size: 1.8rem;
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -465,8 +501,8 @@
             </div>
             
             <div class="controls">
+                <!-- УДАЛЕНА кнопка Повтор -->
                 <button id="new-maze">Новый Лабиринт</button>
-                <button id="replay">Повтор</button>
             </div>
         </div>
         
@@ -474,12 +510,13 @@
             <canvas id="maze-canvas"></canvas>
         </div>
         
+        <!-- Мобильные контролы (для экранов <= 768px) -->
         <div class="mobile-controls">
             <div class="joystick-container">
                 <div class="joystick" id="joystick">
                     <div class="joystick-handle" id="joystick-handle"></div>
                 </div>
-                <div>Джойстик</div>
+                <!-- Убрана подпись "Джойстик" для экономии места на мобильных -->
             </div>
             
             <div class="dpad-container">
@@ -549,7 +586,6 @@
         let joystickActive = false;
         let moveInterval = null;
         let currentDirection = { x: 0, y: 0 };
-        // isMobile не используется для контроля отображения, так как это делается через CSS
         
         const canvas = document.getElementById('maze-canvas');
         const ctx = canvas.getContext('2d');
@@ -964,7 +1000,6 @@
             
             // D-Pad events
             dpadButtons.forEach(btn => {
-                // Используем touchstart/touchend для D-Pad для непрерывного движения
                 let currentTimeout;
                 
                 const startMove = (e) => {
@@ -1000,7 +1035,10 @@
         function handleJoystickMove(e) {
             if (!joystickActive) return;
             e.preventDefault();
-            updateJoystickPosition(e);
+            // Получаем координаты из первого касания
+            if (e.touches.length > 0) {
+                updateJoystickPosition(e);
+            }
         }
 
         function handleJoystickEnd(e) {
@@ -1019,8 +1057,10 @@
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
             
+            // Получаем координаты касания
             const touch = e.touches[0];
-            
+            if (!touch) return; // Защита от отсутствия касания в событиях touchmove/touchend
+
             // Координаты относительно центра джойстика
             let deltaX = touch.clientX - (rect.left + centerX);
             let deltaY = touch.clientY - (rect.top + centerY);
@@ -1146,7 +1186,7 @@
 
         // Initialize everything
         document.getElementById('new-maze').addEventListener('click', initGame);
-        document.getElementById('replay').addEventListener('click', initGame);
+        // УДАЛЕНА привязка для кнопки 'replay'
         document.getElementById('play-again').addEventListener('click', () => {
             document.getElementById('win-modal').style.display = 'none';
             initGame();
